@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RouteComponentProps } from '@reach/router';
 import { Bar, List } from './styles';
 import * as sortingAlgorithms from '../../services/sorting';
@@ -22,8 +22,16 @@ const SECONDARY_COLOR = 'green';
 
 export const Sorting = (props: SortingProps): JSX.Element => {
   const [list, setList] = useState<number[]>([]);
+  const intervalRef = useRef<NodeJS.Timer | null>(null);
+
+  const stopSort = (): void => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
 
   const resetList = (): void => {
+    stopSort();
     let numberOfBars = getScreenWidth() / 3;
     numberOfBars -= Math.floor(numberOfBars * 0.5);
 
@@ -36,14 +44,14 @@ export const Sorting = (props: SortingProps): JSX.Element => {
   };
 
   const mergeSort = (): void => {
-    const mergeSortGenerator = sortingAlgorithms.mergeSortGenerator(list, 0);
-    const interval = setInterval(() => {
+    const mergeSortGenerator = sortingAlgorithms.mergeSortGenerator([...list], 0);
+    intervalRef.current = setInterval(() => {
       const arrayBars = document.getElementsByClassName('array-bar');
 
       const { value, done } = mergeSortGenerator.next();
 
       if (done) {
-        clearInterval(interval);
+        stopSort();
         setList(value);
         return;
       }
@@ -80,14 +88,60 @@ export const Sorting = (props: SortingProps): JSX.Element => {
     }, ANIMATION_SPEED_MS);
   };
 
+  const quickSort = (): void => {
+    const quickSortGenerator = sortingAlgorithms.quickSort([...list], 0, list.length - 1);
+    intervalRef.current = setInterval(() => {
+      const arrayBars = document.getElementsByClassName('array-bar');
+
+      const { value, done } = quickSortGenerator.next();
+
+      if (done) {
+        stopSort();
+        setList(value);
+        return;
+      }
+
+      const [
+        firstIndex,
+        secondIndex,
+        firstIndexValue,
+        secondIndexValue,
+      ] = value;
+
+      const firstBar = arrayBars[firstIndex];
+      const firstBarStyle = firstBar.style;
+      firstBarStyle.backgroundColor = SECONDARY_COLOR;
+
+      const secondBar = arrayBars[secondIndex];
+      const secondBarStyle = secondBar.style;
+      secondBarStyle.backgroundColor = SECONDARY_COLOR;
+
+      setTimeout(() => {
+        firstBarStyle.backgroundColor = PRIMARY_COLOR;
+        firstBarStyle.height = `${secondIndexValue}px`;
+
+        secondBarStyle.backgroundColor = PRIMARY_COLOR;
+        secondBarStyle.height = `${firstIndexValue}px`;
+      }, ANIMATION_SPEED_MS);
+    }, ANIMATION_SPEED_MS);
+  };
+
   const headerButtons = [
     {
       onClick: resetList,
       text: 'Reset',
     },
     {
+      onClick: stopSort,
+      text: 'Stop',
+    },
+    {
       onClick: mergeSort,
       text: 'Merge Sort',
+    },
+    {
+      onClick: quickSort,
+      text: 'Quick Sort',
     },
   ];
 
@@ -104,7 +158,11 @@ export const Sorting = (props: SortingProps): JSX.Element => {
       <List>
         {
           list.map((item, index) => (
-            <Bar className="array-bar" style={{ height: item }} key={index} />
+            <Bar
+              className="array-bar"
+              style={{ height: item }}
+              key={`${index}-Sorting-Bar`}
+            />
           ))
         }
       </List>
