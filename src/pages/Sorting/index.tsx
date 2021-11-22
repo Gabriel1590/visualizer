@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
 import { RouteComponentProps } from '@reach/router';
 import { Bar, List } from './styles';
 import * as sortingAlgorithms from '../../services/sorting';
@@ -20,35 +22,50 @@ const PRIMARY_COLOR = 'pink';
 // This is the color of array bars that are being compared throughout the animations.
 const SECONDARY_COLOR = 'green';
 
+const TERNARY_COLOR = 'blue';
+
+type SortCallback = (
+  (
+    value: number[],
+    arrayBars: HTMLCollectionOf<Element>,
+  ) => void
+);
+
 export const Sorting = (props: SortingProps): JSX.Element => {
   const [list, setList] = useState<number[]>([]);
   const intervalRef = useRef<NodeJS.Timer | null>(null);
 
-  const stopSort = (): void => {
+  const stopSort = useCallback((): void => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-  };
+  }, []);
 
-  const resetList = (): void => {
+  const resetList = useCallback((): void => {
     stopSort();
     let numberOfBars = getScreenWidth() / 3;
     numberOfBars -= Math.floor(numberOfBars * 0.5);
 
     const newList = Array.from(
       { length: numberOfBars },
+      // { length: 10 },
       () => randomIntFromInterval(5, getScreenHeight()),
     );
 
     setList(newList);
-  };
+  }, [stopSort]);
 
-  const mergeSort = (): void => {
-    const mergeSortGenerator = sortingAlgorithms.mergeSortGenerator([...list], 0);
+  const sort = (
+    sortGenerator: IterableIterator<number[]>,
+    compareCallback: SortCallback,
+    updateCallback: SortCallback,
+  ): void => {
+    stopSort();
+
     intervalRef.current = setInterval(() => {
       const arrayBars = document.getElementsByClassName('array-bar');
 
-      const { value, done } = mergeSortGenerator.next();
+      const { value, done } = sortGenerator.next();
 
       if (done) {
         stopSort();
@@ -56,11 +73,20 @@ export const Sorting = (props: SortingProps): JSX.Element => {
         return;
       }
 
+      compareCallback(value, arrayBars);
+
+      setTimeout(() => updateCallback(value, arrayBars), ANIMATION_SPEED_MS);
+    }, ANIMATION_SPEED_MS);
+  };
+
+  const mergeSort = (): void => {
+    function compare(
+      value: number[],
+      arrayBars: HTMLCollectionOf<Element>,
+    ): void {
       const [
         firstIndexToCompare,
         secondIndexToCompare,
-        indexToChange,
-        newValue,
       ] = value;
 
       if (firstIndexToCompare !== -1 && secondIndexToCompare !== -1) {
@@ -71,41 +97,47 @@ export const Sorting = (props: SortingProps): JSX.Element => {
         const secondBarStyle = secondBar.style;
         secondBarStyle.backgroundColor = SECONDARY_COLOR;
       }
+    }
 
-      setTimeout(() => {
-        if (firstIndexToCompare !== -1 && secondIndexToCompare !== -1) {
-          const firstBar = arrayBars[firstIndexToCompare];
-          const firstBarStyle = firstBar.style;
-          firstBarStyle.backgroundColor = PRIMARY_COLOR;
-          const secondBar = arrayBars[secondIndexToCompare];
-          const secondBarStyle = secondBar.style;
-          secondBarStyle.backgroundColor = PRIMARY_COLOR;
-        }
+    function update(
+      value: number[],
+      arrayBars: HTMLCollectionOf<Element>,
+    ): void {
+      const [
+        firstIndexToCompare,
+        secondIndexToCompare,
+        indexToChange,
+        newValue,
+      ] = value;
 
-        const barToChange = arrayBars[indexToChange];
-        barToChange.style!.height = `${newValue}px`;
-      }, ANIMATION_SPEED_MS);
-    }, ANIMATION_SPEED_MS);
+      if (firstIndexToCompare !== -1 && secondIndexToCompare !== -1) {
+        const firstBar = arrayBars[firstIndexToCompare];
+        const firstBarStyle = firstBar.style;
+        firstBarStyle.backgroundColor = PRIMARY_COLOR;
+        const secondBar = arrayBars[secondIndexToCompare];
+        const secondBarStyle = secondBar.style;
+        secondBarStyle.backgroundColor = PRIMARY_COLOR;
+      }
+
+      const barToChange = arrayBars[indexToChange];
+      barToChange.style!.height = `${newValue}px`;
+    }
+
+    const mergeSortGenerator = sortingAlgorithms
+      .mergeSortGenerator([...list], 0);
+
+    sort(mergeSortGenerator, compare, update);
   };
 
   const quickSort = (): void => {
-    const quickSortGenerator = sortingAlgorithms.quickSort([...list], 0, list.length - 1);
-    intervalRef.current = setInterval(() => {
-      const arrayBars = document.getElementsByClassName('array-bar');
-
-      const { value, done } = quickSortGenerator.next();
-
-      if (done) {
-        stopSort();
-        setList(value);
-        return;
-      }
-
+    function compare(
+      value: number[],
+      arrayBars: HTMLCollectionOf<Element>,
+    ): void {
       const [
         firstIndex,
+        _,
         secondIndex,
-        firstIndexValue,
-        secondIndexValue,
       ] = value;
 
       const firstBar = arrayBars[firstIndex];
@@ -115,16 +147,39 @@ export const Sorting = (props: SortingProps): JSX.Element => {
       const secondBar = arrayBars[secondIndex];
       const secondBarStyle = secondBar.style;
       secondBarStyle.backgroundColor = SECONDARY_COLOR;
+    }
 
-      setTimeout(() => {
-        firstBarStyle.backgroundColor = PRIMARY_COLOR;
-        firstBarStyle.height = `${secondIndexValue}px`;
+    function update(
+      value: number[],
+      arrayBars: HTMLCollectionOf<Element>,
+    ): void {
+      const [
+        firstIndex,
+        firstIndexNewValue,
+        secondIndex,
+        secondIndexNewValue,
+      ] = value;
 
-        secondBarStyle.backgroundColor = PRIMARY_COLOR;
-        secondBarStyle.height = `${firstIndexValue}px`;
-      }, ANIMATION_SPEED_MS);
-    }, ANIMATION_SPEED_MS);
+      const firstBar = arrayBars[firstIndex];
+      const firstBarStyle = firstBar.style;
+      firstBarStyle.backgroundColor = PRIMARY_COLOR;
+      firstBarStyle.height = `${firstIndexNewValue}px`;
+
+      const secondBar = arrayBars[secondIndex];
+      const secondBarStyle = secondBar.style;
+      secondBarStyle.backgroundColor = PRIMARY_COLOR;
+      secondBarStyle.height = `${secondIndexNewValue}px`;
+    }
+
+    const quickSortGenerator = sortingAlgorithms
+      .quickSortGenerator([...list], 0, list.length - 1);
+
+    sort(quickSortGenerator, compare, update);
   };
+
+  useEffect(() => {
+    resetList();
+  }, [resetList]);
 
   const headerButtons = [
     {
@@ -144,10 +199,6 @@ export const Sorting = (props: SortingProps): JSX.Element => {
       text: 'Quick Sort',
     },
   ];
-
-  useEffect(() => {
-    resetList();
-  }, []);
 
   return (
     <>
