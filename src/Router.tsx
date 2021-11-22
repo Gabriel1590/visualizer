@@ -1,7 +1,10 @@
-import { Router as ReachRouter } from '@reach/router';
+import { Router as ReachRouter, Redirect } from '@reach/router';
+import { Sorting } from './pages/Sorting';
 
 export const AppRouter = (): JSX.Element => (
   <ReachRouter>
-    {/* <Home path="/" /> */}
+    <Redirect from="/" to="/sorting" />
+
+    <Sorting path="/sorting" />
   </ReachRouter>
 );
