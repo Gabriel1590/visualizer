@@ -3,8 +3,7 @@ import { Sorting } from './pages/Sorting';
 
 export const AppRouter = (): JSX.Element => (
   <ReachRouter>
-    <Redirect from="/" to="/sorting" />
-
     <Sorting path="/sorting" />
+    <Redirect noThrow from="*" to="/sorting" />
   </ReachRouter>
 );

@@ -33,8 +33,8 @@ export function* quickSortGenerator(arr: number[], startIdx: number, endIdx: num
   yield [pivotIdx, arr[end], end, pivot];
   swap(arr, pivotIdx, end);
 
-  yield* quickSort(arr, startIdx, end - 1);
-  yield* quickSort(arr, end + 1, endIdx);
+  yield* quickSortGenerator(arr, startIdx, end - 1);
+  yield* quickSortGenerator(arr, end + 1, endIdx);
 
   return arr;
 }
