@@ -1,9 +1,19 @@
-import { Router as ReachRouter, Redirect } from '@reach/router';
+import {
+  Routes,
+  Route,
+  Navigate,
+  HashRouter,
+} from 'react-router-dom';
 import { Sorting } from './pages/Sorting';
 
 export const AppRouter = (): JSX.Element => (
-  <ReachRouter>
-    <Sorting path="/sorting" />
-    <Redirect noThrow from="*" to="/sorting" />
-  </ReachRouter>
+  <HashRouter>
+    <Routes>
+      <Route path="/sorting" element={<Sorting />} />
+      <Route
+        path="*"
+        element={<Navigate to="/sorting" />}
+      />
+    </Routes>
+  </HashRouter>
 );

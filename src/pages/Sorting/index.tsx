@@ -1,7 +1,6 @@
 import {
   useCallback, useEffect, useRef, useState,
 } from 'react';
-import { RouteComponentProps } from '@reach/router';
 import { Bar, List } from './styles';
 import * as sortingAlgorithms from '../../services/sorting';
 import { Header } from '../../components/Header';
@@ -11,7 +10,7 @@ import {
   randomIntFromInterval,
 } from '../../services/utils';
 
-type SortingProps = RouteComponentProps
+interface SortingProps {}
 
 // Change this value for the speed of the animations.
 const ANIMATION_SPEED_MS = 1;
